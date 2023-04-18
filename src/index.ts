@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
-import { TMovieDB } from "./types";
-import { db } from "./database/knex";
+import { TMovieDB, UpdateMovieInputDTO } from "./types";
+// import { db } from "./database/BaseDatabase";
 import { Movie } from "./models/Movie";
+import { MovieDatabase } from "./database/MovieDatabase";
 
 const app = express();
 
@@ -31,24 +32,14 @@ app.get("/ping", async (req: Request, res: Response) => {
   }
 });
 
-//get Movies
+//get All Movies
 app.get("/movies", async (req: Request, res: Response) => {
   try {
-    const q = req.query.q;
+    const q = req.query.q as  string | undefined;
 
-    let moviesDB;
+    const movieDatabase = new MovieDatabase()
+    const moviesDB = await movieDatabase.findMovies(q)
 
-    if (q) {
-      const result: TMovieDB[] = await db("movies").where(
-        "title",
-        "LIKE",
-        `%${q}%`
-      );
-      moviesDB = result;
-    } else {
-      const result: TMovieDB[] = await db("movies");
-      moviesDB = result;
-    }
 
     const movies: Movie[] = moviesDB.map(
       (movieDB) =>
@@ -76,7 +67,7 @@ app.get("/movies", async (req: Request, res: Response) => {
   }
 });
 
-//create Movie
+// create Movie
 app.post("/movies", async (req: Request, res: Response) => {
   try {
     const { id, title, duration } = req.body;
@@ -96,9 +87,12 @@ app.post("/movies", async (req: Request, res: Response) => {
       throw new Error("'duration' deve ser number");
     }
 
-    const [movieDBExists]: TMovieDB[] | undefined[] = await db("movies").where({
-      id,
-    });
+    // const [movieDBExists]: TMovieDB[] | undefined[] = await db("movies").where({
+    //   id,
+    // });
+
+    const movieDatabase = new MovieDatabase()
+    const movieDBExists = await movieDatabase.findMovieById(id)
 
     if (movieDBExists) {
       res.status(400);
@@ -127,10 +121,10 @@ app.post("/movies", async (req: Request, res: Response) => {
         created_at: newMovie.getCreatedAt()
     }
 
-    await db("movies").insert(newMovieDB);
-    const [movieDB]: TMovieDB[] = await db("movies").where({ id });
+    // await db("movies").insert(newMovieDB);
+    await movieDatabase.insertMovie(newMovieDB)
 
-    res.status(201).send({message:"Video adicionado com sucesso!", movieDB});
+    res.status(201).send({ message:"Video adicionado com sucesso!",newMovie})
 
   } catch (error) {
     console.log(error);
@@ -150,48 +144,91 @@ app.post("/movies", async (req: Request, res: Response) => {
 //edit movie
 app.put("/movies/:id", async (req: Request, res: Response) => {
   try {
-    const id = req.params.id;
+    // const id = req.params.id;
     
-    const newTitle = req.body.title as string | undefined;
-    const newDuration = req.body.duration as number | undefined;
+    const {id} = req.params;
 
-    const [movieDBExists]: TMovieDB[] | undefined[] = await db("movies").where({
-      id,
-    });
+    // const newTitle = req.body.title as string | undefined;
+    // const newDuration = req.body.duration as number | undefined;
+
+    const {title, duration} = req.body as UpdateMovieInputDTO;
+
+    // const [movieDBExists]: TMovieDB[] | undefined[] = await db("movies").where({
+    //   id,
+    // });
+    
+    const movieDatabase = new MovieDatabase()
+    const movieDBExists = await movieDatabase.findMovieById(id)
 
     if (!movieDBExists) {
       res.status(400);
       throw new Error("'id' não encontrado!");
     }
     
-    if (typeof newTitle !== "string") {
+    // if (typeof newTitle !== "string") {
+    //   res.status(400);
+    //   throw new Error("'title' deve ser string");
+    // }
+
+    // if (typeof newDuration !== "number") {
+    //   res.status(400);
+    //   throw new Error("'duration' deve ser number");
+    // }
+    if(title){
+    if (typeof title !== "string") {
       res.status(400);
       throw new Error("'title' deve ser string");
-    }
-
-    if (typeof newDuration !== "number") {
+    }}
+if(duration){
+    if (typeof duration !== "number") {
       res.status(400);
       throw new Error("'duration' deve ser number");
-    }
+    }}
+  //   const newMovie = new Movie(
+  //     id,
+  //     newTitle || movieDBExists.title,
+  //     newDuration || movieDBExists.duration,
+  //     movieDBExists.created_at
+  //   );   
 
-    const newMovie = new Movie(
-      id,
-      newTitle || movieDBExists.title,
-      newDuration || movieDBExists.duration,
-      movieDBExists.created_at
-    );   
+  // const newMovieDB: TMovieDB ={
+  //     id: movieDBExists.id,
+  //     title: newMovie.getTitle(),
+  //     duration: newMovie.getDuration(),        
+  //     created_at: movieDBExists.created_at
+  // }
 
-  const newMovieDB: TMovieDB ={
-      id: movieDBExists.id,
-      title: newMovie.getTitle(),
-      duration: newMovie.getDuration(),        
-      created_at: movieDBExists.created_at
+  const updateMovie = new Movie (
+    movieDBExists.id,
+    movieDBExists.title,  
+    movieDBExists.duration,
+    movieDBExists.created_at
+  )
+
+  title && (updateMovie._title = title)
+  duration && (updateMovie._duration = duration)
+  
+  const newMovieDB: TMovieDB = {
+    id: updateMovie._id,
+    title: updateMovie._title,
+    duration: updateMovie._duration,
+    created_at: updateMovie._createdAt
   }
 
-  await db("movies").update(newMovieDB).where({ id });
-  const [movieDB]: TMovieDB[] = await db("movies").where({ id });
+//   const newMovieDB: TMovieDB ={
+//     id: movieDBExists.id,
+//     title: newMovie._title,
+//     duration: newMovie._duration,        
+//     created_at: movieDBExists.created_at
+// }
 
-  res.status(201).send(movieDB);
+  // await db("movies").update(newMovieDB).where({ id });
+  await movieDatabase.updateMovie(newMovieDB)
+
+  // res.status(201).send({ message:"Video atualizado com sucesso!",newMovie});
+  
+    res.status(201).send({ message:"Video atualizado com sucesso!",updateMovie});
+  
 
   } catch (error) {
     console.log(error);
@@ -213,16 +250,21 @@ app.delete("/movies/:id", async (req: Request, res: Response) => {
   try {
     const idToDelete = req.params.id;
 
-    const [movieDBExists]: TMovieDB[] | undefined[] = await db("movies").where({
-      id: idToDelete,
-    });
+    // const [movieDBExists]: TMovieDB[] | undefined[] = await db("movies").where({
+    //   id: idToDelete,
+    // });
+
+    const movieDatabase = new MovieDatabase()
+    const movieDBExists = await movieDatabase.findMovieById(idToDelete)
 
     if (!movieDBExists) {
       res.status(400);
       throw new Error("Filme não encontrado");
     }
 
-    await db("movies").del().where({ id: idToDelete });
+    // await db("movies").del().where({ id: idToDelete });
+
+    await movieDatabase.deleteMovie(idToDelete)
 
     res.status(200).send("Filme deletado com sucesso!");
 

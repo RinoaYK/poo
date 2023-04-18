@@ -1,4 +1,3 @@
 # Exercício 2
-
-Implemente os endpoints GET /videos e POST /videos utilizando classes como visto em aula. <br>
-Caso o processo ainda esteja confuso, implemente primeiro sem o uso da classe e depois refatore.
+Agora crie o arquivo src/database/VideoDatabase.ts e implemente a respectiva classe.<br>
+Refatore o endpoint GET /videos implementando o(s) método(s) público(s) necessários seguindo o que você desenvolveu.

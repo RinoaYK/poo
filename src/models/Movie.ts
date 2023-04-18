@@ -30,4 +30,33 @@ export class Movie {
   getCreatedAt(): string {
     return this.createdAt;
   }
+
+  
+  get _id() : string {
+    return this.id
+  }
+  
+  set _id(v : string) {
+    this.id = v;
+  }
+
+  get _title() : string {
+    return this.title
+  }
+  
+  set _title(v : string) {
+    this.title = v;
+  }
+  
+  get _duration() : number {
+    return this.duration
+  }
+  
+  set _duration(v : number) {
+    this.duration = v;
+  }
+
+  get _createdAt() : string {
+    return this.createdAt
+  }
 }
